@@ -1,13 +1,13 @@
 admin:
   access_log_path: /tmp/admin_access.log
   address:
-    socket_address: { address: 127.0.0.1, port_value: 9901 }
+    socket_address: { address: 0.0.0.0, port_value: 9901 }
 
 static_resources:
   listeners:
   - name: listener_0
     address:
-      socket_address: { address: 127.0.0.1, port_value: 10000 }
+      socket_address: { address: 0.0.0.0, port_value: 10000 }
     filter_chains:
     - filters:
       - name: envoy.filters.network.http_connection_manager
@@ -22,20 +22,20 @@ static_resources:
               domains: ["*"]
               routes:
               - match: { prefix: "/" }
-                route: { cluster: some_service }
+                route: { cluster: service1 }
           http_filters:
           - name: envoy.filters.http.router
   clusters:
-  - name: some_service
+  - name: service1
     connect_timeout: 0.25s
-    type: STATIC
+    type: STRICT_DNS
     lb_policy: ROUND_ROBIN
     load_assignment:
-      cluster_name: some_service
+      cluster_name: service1
       endpoints:
       - lb_endpoints:
         - endpoint:
             address:
               socket_address:
-                address: 127.0.0.1
-                port_value: 1234
+                address: upstream-app
+                port_value: 8080
