@@ -16,13 +16,31 @@ static_resources:
           stat_prefix: ingress_http
           codec_type: AUTO
           route_config:
-            name: local_route
+            name: egress_route
             virtual_hosts:
-            - name: local_service
-              domains: ["*"]
+            - name: service1
+              domains: ["www.example.com", "example.com"]
               routes:
-              - match: { prefix: "/" }
-                route: { cluster: service1 }
+              - match:
+                  prefix: "/service/2"
+                route:
+                  prefix_rewrite: "/"
+                  cluster: service2
+                  hash_policy:
+                    - cookie:
+                        name: balanceid
+                        ttl: 0s
+              - match:
+                  prefix: "/"
+                route:
+                  cluster: service1
+              response_headers_to_add:
+                - header:
+                    key: "x-frame-options"
+                    value: "sameorigin"
+                - header:
+                    key: "x-xss-protection"
+                    value: "1; mode=block"
           http_filters:
           - name: envoy.filters.http.router
   clusters:
@@ -37,5 +55,36 @@ static_resources:
         - endpoint:
             address:
               socket_address:
-                address: upstream-app
+                address: service1-1
+                port_value: 8080
+        - endpoint:
+            address:
+              socket_address:
+                address: service1-2
+                port_value: 8080
+    health_checks:
+      - timeout: 1s
+        interval: 3s
+        interval_jitter: 1s
+        unhealthy_threshold: 1
+        healthy_threshold: 1
+        http_health_check:
+          path: "/healthz"
+  - name: service2
+    connect_timeout: 0.25s
+    type: STRICT_DNS
+    lb_policy: RING_HASH
+    load_assignment:
+      cluster_name: service2
+      endpoints:
+      - lb_endpoints:
+        - endpoint:
+            address:
+              socket_address:
+                address: service2-1
+                port_value: 8080
+        - endpoint:
+            address:
+              socket_address:
+                address: service2-2
                 port_value: 8080
