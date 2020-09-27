@@ -1,9 +1,10 @@
 #!/bin/bash
 
-[[ $# -ne 2 ]] && echo "please enter arguments" && exit 1
-num=$1
-port=$2
-app=service1
+[[ $# -ne 3 ]] && echo "please enter arguments" && exit 1
+app=$1
+num=$2
+port=$3
+image_name=upstream-service
 container_name=${app}-${num}
 network="envoy"
 
