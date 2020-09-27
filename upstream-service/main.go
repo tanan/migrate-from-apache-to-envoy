@@ -11,9 +11,8 @@ import (
 var (
 	host      string
 	isHealthy bool = true
+	serviceName string
 )
-
-const ServiceName = "service1"
 
 type Response struct {
 	Host    string
@@ -23,12 +22,13 @@ type Response struct {
 
 func init() {
 	host, _ = os.Hostname()
+	serviceName = os.Getenv("SERVICE_NAME")
 }
 
 func NewResponse(message string) Response {
 	return Response{
 		Host:    host,
-		Service: ServiceName,
+		Service: serviceName,
 		Message: message,
 	}
 }
