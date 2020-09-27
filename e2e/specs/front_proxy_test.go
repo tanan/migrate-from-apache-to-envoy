@@ -15,9 +15,9 @@ type TT struct {
 
 func Test_BasicRouting(t *testing.T) {
 	tests := []TT{
-		{name: "/にアクセスするとservice1からHello, Worldを返す", fields: models.Fields{Scheme: "http", Host: "www.example.com", Path: "/", Status: http.StatusOK, Service: "service1", Message: "Hello, World"}},
-		{name: "/service/2にアクセスするとservice2からHello, Worldを返す", fields: models.Fields{Scheme: "http", Host: "www.example.com", Path: "/service/2", Status: http.StatusOK, Service: "service2", Message: "Hello, World"}},
-		{name: "localhostドメインでアクセスすると404を返す", fields: models.Fields{Scheme: "http", Host: "localhost", Path: "/", Status: http.StatusNotFound}},
+		{name: "/にアクセスするとservice1からHello, Worldを返す", fields: models.Fields{Scheme: "https", Host: "www.example.com", Path: "/", Status: http.StatusOK, Service: "service1", Message: "Hello, World"}},
+		{name: "/service/2にアクセスするとservice2からHello, Worldを返す", fields: models.Fields{Scheme: "https", Host: "www.example.com", Path: "/service/2", Status: http.StatusOK, Service: "service2", Message: "Hello, World"}},
+		{name: "localhostドメインでアクセスすると404を返す", fields: models.Fields{Scheme: "https", Host: "localhost", Path: "/", Status: http.StatusNotFound}},
 	}
 
 	for _, tt := range tests {
@@ -32,7 +32,7 @@ func Test_BasicRouting(t *testing.T) {
 
 func Test_Header(t *testing.T) {
 	tests := []TT{
-		{name: "/にアクセスするとheaderにx-frame-options,x-xss-protectionを付与して返す", fields: models.Fields{Scheme: "http", Host: "www.example.com", Path: "/healthz", Status: http.StatusOK, Service: "service1", Message: "Status is healthy", RespHeader: map[string]string{"x-frame-options": "sameorigin", "x-xss-protection": "1; mode=block"}}},
+		{name: "/にアクセスするとheaderにx-frame-options,x-xss-protectionを付与して返す", fields: models.Fields{Scheme: "https", Host: "www.example.com", Path: "/healthz", Status: http.StatusOK, Service: "service1", Message: "Status is healthy", RespHeader: map[string]string{"x-frame-options": "sameorigin", "x-xss-protection": "1; mode=block"}}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -47,17 +47,16 @@ func Test_Header(t *testing.T) {
 
 func Test_RingHash(t *testing.T) {
 	tests := []TT{
-		{name: "/service/2にアクセスするとレスポンスにSet-Cookieが付与される", fields: models.Fields{Scheme: "http", Host: "www.example.com", Path: "/service/2", Status: http.StatusOK, Service: "service2"}},
+		{name: "/service/2にアクセスするとレスポンスにSet-Cookieが付与される", fields: models.Fields{Scheme: "https", Host: "www.example.com", Path: "/service/2", Status: http.StatusOK, Service: "service2", RequestCookie: map[string]string{}}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			resp, body := testutil.Request(t, tt.fields)
 			testutil.HasBalanceIdCookie(t, resp.Cookies())
 
-			expect := map[string]string{}
 			for _, cookie := range resp.Cookies() {
 				if cookie.Name == "balanceid" {
-					expect[cookie.Name] = cookie.Value
+					tt.fields.RequestCookie[cookie.Name] = cookie.Value
 				}
 			}
 
@@ -65,7 +64,6 @@ func Test_RingHash(t *testing.T) {
 				r, b := testutil.Request(t, tt.fields)
 				testutil.AssertStatusCode(t, r.StatusCode, tt.fields.Status)
 				testutil.AssertService(t, b.Service, tt.fields.Service)
-				testutil.AssertResponseCookie(t, r.Cookies(), expect)
 				testutil.AssertHost(t, b.Host, body.Host)
 			}
 		})
@@ -73,7 +71,7 @@ func Test_RingHash(t *testing.T) {
 }
 
 func Test_Healthcheck(t *testing.T) {
-	test := TT{name: "1つのhostがdownした場合、activeなhostにのみrequestが振り分けられる", fields: models.Fields{Scheme: "http", Host: "www.example.com", Path: "/healthz", Status: http.StatusOK, Service: "service1", Message: "Status is healthy"}}
+	test := TT{name: "1つのhostがdownした場合、activeなhostにのみrequestが振り分けられる", fields: models.Fields{Scheme: "https", Host: "www.example.com", Path: "/healthz", Status: http.StatusOK, Service: "service1", Message: "Status is healthy"}}
 
 	t.Run(test.name, func(t *testing.T) {
 		_, _ = testutil.UnhealthyRequest(t, test.fields)

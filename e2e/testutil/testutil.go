@@ -1,6 +1,7 @@
 package testutil
 
 import (
+	"crypto/tls"
 	"e2e/models"
 	"encoding/json"
 	"fmt"
@@ -64,7 +65,7 @@ func AssertResponseCookie(t *testing.T, actual []*http.Cookie, expect map[string
 		}
 	}
 	if cookieCount != len(expect) {
-		t.Error("some cookies are not match")
+		t.Errorf("cookie matched %v, want %v", cookieCount, len(expect))
 	}
 }
 
@@ -111,12 +112,17 @@ func Request(t *testing.T, fields models.Fields) (*http.Response, models.Service
 }
 
 func request(t *testing.T, req *http.Request) (*http.Response, models.ServiceResponse) {
-	client := &http.Client{}
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client := &http.Client{
+		Transport: tr,
+	}
 	resp, err := client.Do(req)
-	defer resp.Body.Close()
 	if err != nil {
 		t.Errorf("error: %v", err)
 	}
+	defer resp.Body.Close()
 	var m models.ServiceResponse
 	b, _ := ioutil.ReadAll(resp.Body)
 	_ = json.Unmarshal(b, &m)
